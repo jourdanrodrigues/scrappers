@@ -15,9 +15,9 @@ from read_dot_env import read_dot_env
 read_dot_env()
 
 EMAIL_SERVER = os.getenv('EMAIL_SERVER')
-EMAIL = os.getenv('EMAIL')
-PASSWORD = os.getenv('PASSWORD')
-ENDPOINT = os.getenv('CARTORIO_ENDPOINT')
+EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+REGISTRY_ENDPOINT = os.getenv('REGISTRY_ENDPOINT')
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")
@@ -42,7 +42,7 @@ class SyncEntries:
             "SenhaInternet": 'R1BBV2'
         }
         try:
-            response = requests.post(ENDPOINT, payload)
+            response = requests.post(REGISTRY_ENDPOINT, payload)
         except (requests.ConnectTimeout, requests.HTTPError):
             pass
         else:
@@ -66,14 +66,14 @@ class SyncEntries:
 
         message = MIMEText(f'Novos status:\n\"{titles_str}.', 'plain')
         message['Subject'] = f'Novo status do cartório: {titles[-1]}'
-        message['From'] = EMAIL
-        message['To'] = EMAIL
+        message['From'] = EMAIL_ADDRESS
+        message['To'] = EMAIL_ADDRESS
 
         server = SMTP(EMAIL_SERVER)
         server.ehlo()
         server.starttls()
-        server.login(EMAIL, PASSWORD)
-        server.sendmail(EMAIL, [EMAIL], message.as_string())
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_ADDRESS, [EMAIL_ADDRESS], message.as_string())
         server.quit()
 
 
