@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 requests = "*"
 pymongo = "*"
+sentry-sdk = "*"
 
 [dev-packages]
 

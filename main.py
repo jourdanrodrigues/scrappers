@@ -11,9 +11,11 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from read_dot_env import read_dot_env
+import sentry_sdk
 
 read_dot_env()
 
+SENTRY_DSN = os.getenv('SENTRY_DSN')
 EMAIL_SERVER = os.getenv('EMAIL_SERVER')
 EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
@@ -21,6 +23,8 @@ REGISTRY_ENDPOINT = os.getenv('REGISTRY_ENDPOINT')
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")
+
+sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=1.0)
 
 
 class Entry(TypedDict):
