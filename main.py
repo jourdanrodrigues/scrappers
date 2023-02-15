@@ -1,7 +1,9 @@
 import json
 import os
+from datetime import datetime
 from email.mime.text import MIMEText
 from smtplib import SMTP
+from time import sleep
 from typing import TypedDict
 
 import requests
@@ -76,4 +78,8 @@ class SyncEntries:
 
 
 if __name__ == '__main__':
-    SyncEntries.sync()
+    while True:
+        print(f'Syncing...           - {datetime.utcnow().isoformat()}')
+        SyncEntries.sync()
+        print(f'Waiting next sync... - {datetime.utcnow().isoformat()}')
+        sleep(180)
