@@ -7,7 +7,8 @@ services:
     depends_on:
       - mongodb
     environment:
-      MONGO_URI: mongodb://local_root:local_root_password@mongodb:27017/database_name
+      MONGODB_URI: mongodb://local_root:local_root_password@mongodb
+      MONGODB_DATABASE: database_name
 
   mongodb:
     image: mongo:6.0.4
@@ -19,5 +20,3 @@ services:
       MONGO_INITDB_DATABASE: database_name
       MONGO_NON_ROOT_USERNAME: local_non_root
       MONGO_NON_ROOT_PASSWORD: local_non_root_password
-    ports:
-      - "27017:27017"
