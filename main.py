@@ -19,7 +19,10 @@ SENTRY_DSN = os.getenv('SENTRY_DSN')
 EMAIL_SERVER = os.getenv('EMAIL_SERVER')
 EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+
 REGISTRY_ENDPOINT = os.getenv('REGISTRY_ENDPOINT')
+REQUEST_NUMBER = os.getenv('REQUEST_NUMBER')
+REQUEST_PASSWORD = os.getenv('REQUEST_PASSWORD')
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")
@@ -41,9 +44,9 @@ class SyncEntries:
     @classmethod
     def sync(cls):
         payload = {
-            "NrSolicitacao": '01/147004',
+            "NrSolicitacao": REQUEST_NUMBER,
             "TipoSolicitacao": Types.Register,
-            "SenhaInternet": 'R1BBV2'
+            "SenhaInternet": REQUEST_PASSWORD,
         }
         try:
             response = requests.post(REGISTRY_ENDPOINT, payload)
