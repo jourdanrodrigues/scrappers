@@ -1,11 +1,9 @@
-FROM python:3.9-slim-buster
+FROM node:18.14.0-buster-slim
 
 WORKDIR /scrappers/
 
-RUN pip install --upgrade pip
-RUN pip install pipenv
-COPY Pipfile Pipfile.lock ./
+COPY package.json package-lock.json ./
 
-RUN pipenv install --system --deploy --ignore-pipfile
+RUN yarn install
 
 COPY . .

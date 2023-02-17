@@ -1,0 +1,10 @@
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose.yml
+.env
+.env.example
+node_modules
+.db
+.vercel
+.next
