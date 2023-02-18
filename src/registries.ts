@@ -1,15 +1,16 @@
-import TerceiroClient from '@/clients/terceiroClient'
+import {TerceiroClient} from '@/clients/terceiro-client'
 
 export type Registry = typeof terceiroRegistry;
 type Clients = typeof clients;
 
 const terceiroRegistry = {
   id: 1,
-  requisitionTypes: {
-    Register: 1,
-    Certification: 3,
-    DocumentCopy: 5,
-  }
+  name: 'Terceiro Ofício de Registro de Imóveis de Fortaleza',
+  requisitionTypes: [
+    {title: 'Registro e Averbação', value: 1},
+    {title: 'Certidão', value: 3},
+    {title: 'Cópia de Documentos', value: 5},
+  ],
 }
 
 const clients = {
@@ -20,13 +21,13 @@ const registries: Record<number, Registry> = {
   [terceiroRegistry.id]: terceiroRegistry,
 }
 
-export default class Registries {
+export class Registries {
 
-  static getClientById<K extends keyof Clients>(id: K): Clients[K] | undefined {
+  static getClientById<K extends keyof Clients>(id: K): Clients[K] | null {
     return clients[id]
   }
 
-  static existForId(id:number): boolean {
+  static existForId(id: number): boolean {
     return id in registries
   }
 
@@ -34,9 +35,13 @@ export default class Registries {
     return Object.values(registries)
   }
 
+  static getById(id: number): Registry | null {
+    return registries[id]
+  }
+
   static getTypes(): number[] {
     return this.getAll().reduce(
-      (output, registry) => [...output, ...Object.values(registry.requisitionTypes)],
+      (output, registry) => [...output, ...registry.requisitionTypes.map(({value}) => value)],
       [] as number[],
     )
   }

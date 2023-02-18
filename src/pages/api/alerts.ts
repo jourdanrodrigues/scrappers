@@ -1,13 +1,13 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type {NextApiRequest, NextApiResponse} from 'next'
-import prisma from '@/clients/prisma'
-import Registries from '@/registries'
+import {Prisma} from '@/clients/prisma'
+import {Registries} from '@/registries'
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Record<string, any>>,
 ) {
-  const requisitions = await prisma.requisition.findMany({
+  const requisitions = await Prisma.requisition.findMany({
     include: {listeners: true, phases: true},
   })
   const promises = requisitions.map(async (requisition) => {
@@ -16,7 +16,7 @@ export default async function handler(
     const phases = await client.fetchPhases(requisition)
     if (requisition.phases.length === phases.length) return []
     const newPhases = phases.slice(requisition.phases.length)
-    await prisma.phase.createMany({
+    await Prisma.phase.createMany({
       data: newPhases.map((phase) => ({...phase, requisitionId: requisition.id})),
     })
     return newPhases

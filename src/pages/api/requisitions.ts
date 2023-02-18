@@ -1,8 +1,8 @@
 import type {NextApiRequest, NextApiResponse} from 'next'
 import {Requisition} from '@prisma/client'
 import {z} from 'zod'
-import Registries from '@/registries'
-import prisma from '@/clients/prisma'
+import {Registries} from '@/registries'
+import {Prisma} from '@/clients/prisma'
 
 const types = Registries.getTypes()
 
@@ -35,9 +35,9 @@ async function handleRequisitionCreation(req: NextApiRequest, res: NextApiRespon
   if (!Registries.existForId(data.registryId)) {
     return res.status(404).json({message: 'Registry not found'})
   }
-  const requisition = await prisma.requisition.create({data})
+  const requisition = await Prisma.requisition.create({data})
   if (email) {
-    await prisma.listener.create({data: {email, requisitionId: requisition.id}})
+    await Prisma.listener.create({data: {email, requisitionId: requisition.id}})
   }
   return res.status(201).json(requisition)
 }
