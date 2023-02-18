@@ -1,8 +1,10 @@
-FROM node:18.14.0-buster-slim
+FROM node:18.14.0
 
 WORKDIR /scrappers/
 
-COPY package.json package-lock.json ./
+RUN npm install -g npm
+
+COPY package.json yarn.lock ./
 
 RUN yarn install
 

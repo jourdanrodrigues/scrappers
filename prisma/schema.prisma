@@ -9,3 +9,28 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Requisition {
+  id         Int        @id @default(autoincrement())
+  registryId Int
+  number     String
+  password   String?
+  type       Int
+  listeners  Listener[]
+  phases     Phase[]
+}
+
+model Listener {
+  id            Int         @id @default(autoincrement())
+  email         String
+  requisition   Requisition @relation(fields: [requisitionId], references: [id])
+  requisitionId Int
+}
+
+model Phase {
+  id            Int         @id @default(autoincrement())
+  date          DateTime
+  description   String
+  requisition   Requisition @relation(fields: [requisitionId], references: [id])
+  requisitionId Int
+}
