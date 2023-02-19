@@ -31,10 +31,12 @@ export class TerceiroClient {
     requisition: Pick<Requisition, 'number' | 'type' | 'password'>
   ): Promise<RawPhase[]> {
     const data = await this.fetchRequisition(requisition);
-    return data.movi.map(({ DataSistema, NomeFase }) => ({
-      date: new Date(Date.parse(DataSistema)),
-      description: NomeFase,
-    }));
+    return data.movi
+      .map(({ DataSistema, NomeFase }) => ({
+        date: new Date(Date.parse(DataSistema)),
+        description: NomeFase,
+      }))
+      .reverse();
   }
 
   private static fetchRequisition(

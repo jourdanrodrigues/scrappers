@@ -12,31 +12,34 @@ const emailPassword = process.env.EMAIL_PASSWORD;
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Record<string, any>>
+  res: NextApiResponse<Record<'message', string>>
 ) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
   const transport = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: sourceEmail, pass: emailPassword },
   });
   const requisitions = await Prisma.requisition.findMany({
-    include: { listeners: true, phases: true },
+    include: { listeners: true, phases: { orderBy: { id: 'desc' } } },
   });
 
   const promises = requisitions.map(async (requisition) => {
     const client = Registries.getClientById(requisition.registryId);
-    if (!client) return [];
+    if (!client) return;
 
     const fetchedPhases = await client.fetchPhases(requisition);
 
     const knownPhases = requisition.phases;
     const lastKnownPhase = knownPhases[0];
-    const lastFetchedPhase = fetchedPhases.at(-1);
+    const lastFetchedPhase = fetchedPhases[0];
     if (lastKnownPhase?.description === lastFetchedPhase?.description) {
-      return [];
+      return;
     }
 
     const newPhases = fetchedPhases.slice(knownPhases.length);
-    if (newPhases.length === 0) return [];
+    if (newPhases.length === 0) return;
 
     const requisitionId = requisition.id;
     await Promise.all([
@@ -45,11 +48,9 @@ export default async function handler(
       }),
       sendEmails(transport, requisition, newPhases),
     ]);
-
-    return newPhases;
   });
-  const outputs = await Promise.all(promises);
-  res.status(200).json(outputs.flat());
+  await Promise.all(promises);
+  res.status(200).json({ message: 'Alerts sent.' });
 }
 
 function sendEmails(
@@ -63,10 +64,5 @@ function sendEmails(
   const text = `Novas fases da solicitação:\n\n${phasesText}`;
   const subject = `Atualização ${requisition.number}: ${lastPhaseText}`;
 
-  return transport.sendMail({
-    from: 'no-reply@scrappers.com',
-    bcc: emails,
-    subject,
-    text,
-  });
+  return transport.sendMail({ bcc: emails, subject, text });
 }
