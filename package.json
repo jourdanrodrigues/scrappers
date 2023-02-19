@@ -6,7 +6,8 @@
     "dev": "npx next dev",
     "build": "npx next build",
     "start": "npx next start",
-    "lint": "npx next lint"
+    "lint": "npx next lint",
+    "vercel-build": "npx prisma generate && npx prisma migrate deploy && npx next build"
   },
   "dependencies": {
     "@emotion/react": "^11.10.6",
