@@ -61,6 +61,7 @@ next-env.d.ts
 .idea/**/dataSources.local.xml
 .idea/**/sqlDataSources.xml
 .idea/**/dynamic.xml
+.idea/**/dataSources.xml
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
 
