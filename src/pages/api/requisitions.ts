@@ -15,7 +15,7 @@ const requisitionSchema = z.object({
     z.literal(types[1]),
     ...types.slice(2).map((type) => z.literal(type)),
   ]),
-  email: z.string().optional(),
+  emails: z.array(z.string()).optional(),
 });
 
 export default async function handler(
@@ -34,16 +34,14 @@ async function handleRequisitionCreation(
   if (!result.success) {
     return res.status(400).json({ message: result.error.message });
   }
-  const {
-    data: { email, ...data },
-  } = result;
+  const { emails, ...data } = result.data;
   if (!Registries.existForId(data.registryId)) {
     return res.status(404).json({ message: 'Registry not found' });
   }
   const requisition = await Prisma.requisition.create({ data });
-  if (email) {
-    await Prisma.listener.create({
-      data: { email, requisitionId: requisition.id },
+  if (Array.isArray(emails) && emails.length > 0) {
+    await Prisma.listener.createMany({
+      data: emails.map((email) => ({ email, requisitionId: requisition.id })),
     });
   }
   return res.status(201).json(requisition);

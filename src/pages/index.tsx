@@ -1,29 +1,64 @@
 import Head from 'next/head';
 import React, { useState } from 'react';
-import { MenuItem, Select, TextField, Typography } from '@mui/material';
 import styled from '@emotion/styled';
 import { Registries } from '@/registries';
+import { MultiSelect, Select, TextInput } from '@mantine/core';
+import { useForm } from '@mantine/form';
+
+type TFormData = {
+  emails: string[];
+  registryId: number | null;
+  number: string;
+  password: string;
+  type: number | null;
+};
+
+const marginTop = { marginTop: '1rem' };
+
+const emailRegex =
+  /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
 const Main = styled.main`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding-bottom: 10vh;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
+  margin-bottom: 1rem;
+`;
 
-  > *:not(:first-of-type) {
-    margin-top: 1rem !important;
+const FieldsWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 23rem;
+
+  > * {
+    width: 100%;
   }
 `;
 
 const registries = Registries.getAll();
 
 export default function Home() {
-  const [registryId, setRegistryId] = useState(registries[0].id);
-  const registry = Registries.getById(registryId);
-  const [type, setType] = useState(registry?.requisitionTypes[0].value);
+  const [isEmailValid, setEmailValid] = useState(false);
+  const form = useForm<TFormData>({
+    initialValues: {
+      emails: [],
+      registryId: null,
+      type: null,
+      number: '',
+      password: '',
+    },
+  });
+
+  const { registryId, emails } = form.values;
+  const registry = registryId ? Registries.getById(registryId) : null;
+
+  const { onChange: onEmailsChange, ...emailsProps } =
+    form.getInputProps('emails');
   return (
     <>
       <Head>
@@ -33,37 +68,62 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <Main>
-        <Typography component="div">Notificações de cartórios</Typography>
-        <Select
-          labelId="registry"
-          value={registryId}
-          label="Cartório"
-          onChange={(e) => setRegistryId(+e.target.value)}
-        >
-          {registries.map(({ id, name }) => (
-            <MenuItem key={id} value={id}>
-              {name}
-            </MenuItem>
-          ))}
-        </Select>
-        {registry && (
-          <>
-            <Select
-              labelId="requisition-type"
-              value={type}
-              label="Tipo de Solicitacao"
-              onChange={(e) => setType(+e.target.value)}
-            >
-              {registry.requisitionTypes.map(({ title, value }) => (
-                <MenuItem key={value} value={value}>
-                  {title}
-                </MenuItem>
-              ))}
-            </Select>
-            <TextField label="Número da solicitação" variant="outlined" />
-            <TextField label="Senha" variant="outlined" />
-          </>
-        )}
+        <div>Notificações de cartórios</div>
+        <FieldsWrapper>
+          <Select
+            style={marginTop}
+            label="Cartório"
+            required
+            data={registries.map(({ id, name }) => ({
+              value: '' + id,
+              label: name,
+            }))}
+            {...form.getInputProps('registryId')}
+          />
+          {registry && (
+            <>
+              <Select
+                style={marginTop}
+                label="Tipo de Solicitação"
+                required
+                data={registry.requisitionTypes.map(({ title, value }) => ({
+                  value: '' + value,
+                  label: title,
+                }))}
+                {...form.getInputProps('type')}
+              />
+              <TextInput
+                label="Número da Solicitação"
+                required
+                style={marginTop}
+                {...form.getInputProps('number')}
+              />
+              <TextInput
+                label="Senha"
+                required
+                style={marginTop}
+                {...form.getInputProps('password')}
+              />
+              <MultiSelect
+                data={emails}
+                style={marginTop}
+                label="Emails para serem notificados"
+                placeholder="Adicione emails"
+                searchable
+                onSearchChange={(query) => {
+                  setEmailValid(emailRegex.test(query));
+                }}
+                creatable={isEmailValid}
+                getCreateLabel={(query) => `+ Adicionar "${query}"`}
+                onChange={(values) => {
+                  setEmailValid(false);
+                  onEmailsChange(values.map((value) => value.toLowerCase()));
+                }}
+                {...emailsProps}
+              />
+            </>
+          )}
+        </FieldsWrapper>
       </Main>
     </>
   );
