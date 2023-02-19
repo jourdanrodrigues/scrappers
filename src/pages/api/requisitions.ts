@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Requisition } from '@prisma/client';
+import { Phase, Requisition } from '@prisma/client';
 import { z } from 'zod';
 import { Registries } from '@/registries';
 import { Prisma } from '@/clients/prisma';
@@ -9,12 +9,10 @@ const types = Registries.getTypes();
 const requisitionSchema = z.object({
   number: z.string(),
   password: z.string(),
-  registryId: z.number(),
-  type: z.union([
-    z.literal(types[0]),
-    z.literal(types[1]),
-    ...types.slice(2).map((type) => z.literal(type)),
-  ]),
+  registryId: z.coerce.number(),
+  type: z.coerce
+    .number()
+    .refine((value) => types.has(value), { message: 'Tipo inválido' }),
   emails: z.array(z.string()).optional(),
 });
 
@@ -32,17 +30,46 @@ async function handleRequisitionCreation(
 ) {
   const result = requisitionSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ message: result.error.message });
+    return res.status(400).json(result.error);
   }
   const { emails, ...data } = result.data;
-  if (!Registries.existForId(data.registryId)) {
-    return res.status(404).json({ message: 'Registry not found' });
+  const client = Registries.getClientById(data.registryId);
+  if (!client) {
+    return res.status(404).json({ message: 'Cartório desconheido.' });
   }
-  const requisition = await Prisma.requisition.create({ data });
+  let phases: Omit<Phase, 'id' | 'requisitionId'>[];
+  try {
+    phases = await client.fetchPhases(data);
+  } catch (error) {
+    return res.status(400).json({ message: 'Solicitação inválida.' });
+  }
+
+  const requisition = await Prisma.requisition.upsert({
+    where: {
+      requisitionPerRegistry: {
+        registryId: data.registryId,
+        number: data.number,
+      },
+    },
+    update: data,
+    create: data,
+  });
+
+  const requisitionId = requisition.id;
+  const promises = [
+    Prisma.phase.createMany({
+      data: phases.map((phase) => ({ ...phase, requisitionId })),
+    }),
+  ];
+
   if (Array.isArray(emails) && emails.length > 0) {
-    await Prisma.listener.createMany({
-      data: emails.map((email) => ({ email, requisitionId: requisition.id })),
-    });
+    promises.push(
+      Prisma.listener.createMany({
+        data: emails.map((email) => ({ email, requisitionId })),
+      })
+    );
   }
-  return res.status(201).json(requisition);
+
+  await Promise.all(promises);
+  return res.status(201).json({ message: 'Solicitação adicionada.' });
 }

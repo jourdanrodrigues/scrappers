@@ -26,20 +26,25 @@ type QueryResponse = {
 
 export class TerceiroClient {
   static async fetchPhases(
-    requisition: Requisition
+    requisition: Pick<Requisition, 'number' | 'type' | 'password'>
   ): Promise<Omit<Phase, 'id' | 'requisitionId'>[]> {
+    const data = await this.fetchRequisition(requisition);
+    return data.movi.map(({ DataSistema, NomeFase }) => ({
+      date: new Date(Date.parse(DataSistema)),
+      description: NomeFase,
+    }));
+  }
+
+  private static fetchRequisition(
+    requisition: Pick<Requisition, 'number' | 'type' | 'password'>
+  ): Promise<QueryResponse> {
     const payload = {
       NrSolicitacao: requisition.number,
       TipoSolicitacao: requisition.type,
       SenhaInternet: requisition.password,
     };
-    const response = await client.post<QueryResponse>(
-      '/Solicitacao/Consulta',
-      payload
-    );
-    return response.data.movi.map(({ DataSistema, NomeFase }) => ({
-      date: new Date(Date.parse(DataSistema)),
-      description: NomeFase,
-    }));
+    return client
+      .post<QueryResponse>('/Solicitacao/Consulta', payload)
+      .then((response) => response.data);
   }
 }

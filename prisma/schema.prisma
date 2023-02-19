@@ -14,10 +14,12 @@ model Requisition {
   id         Int        @id @default(autoincrement())
   registryId Int
   number     String
-  password   String?
+  password   String
   type       Int
   listeners  Listener[]
   phases     Phase[]
+
+  @@unique([number, registryId], name: "requisitionPerRegistry")
 }
 
 model Listener {

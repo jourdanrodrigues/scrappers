@@ -1,9 +1,13 @@
 import Head from 'next/head';
-import React, { useState } from 'react';
+import React from 'react';
 import styled from '@emotion/styled';
 import { Registries } from '@/registries';
-import { MultiSelect, Select, TextInput } from '@mantine/core';
+import { Button, MultiSelect, Select, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import axios, { AxiosError } from 'axios';
+import { showNotification } from '@mantine/notifications';
+import { useMutation } from '@tanstack/react-query';
+import { ZodError } from 'zod';
 
 type TFormData = {
   emails: string[];
@@ -28,7 +32,7 @@ const Main = styled.main`
   margin-bottom: 1rem;
 `;
 
-const FieldsWrapper = styled.div`
+const Form = styled.form`
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -43,7 +47,6 @@ const FieldsWrapper = styled.div`
 const registries = Registries.getAll();
 
 export default function Home() {
-  const [isEmailValid, setEmailValid] = useState(false);
   const form = useForm<TFormData>({
     initialValues: {
       emails: [],
@@ -52,13 +55,50 @@ export default function Home() {
       number: '',
       password: '',
     },
+    validateInputOnChange: true,
+    validate: {
+      registryId: (value) => (value ? null : 'Selecione um cartório'),
+      type: (value) => (value ? null : 'Selecione um tipo de solicitação'),
+      number: (value) => (value ? null : 'Digite o número da solicitação'),
+      password: (value) => (value ? null : 'Digite a senha da solicitação'),
+      emails: (emails) => {
+        const invalid = emails.filter((email) => !emailRegex.test(email));
+        const emailText = invalid.join('", "');
+        return invalid.length > 0
+          ? invalid.length === 1
+            ? `O email "${emailText}" é inválido`
+            : `Os emails "${emailText}" são inválidos`
+          : null;
+      },
+    },
   });
 
+  const submitMutation = useMutation(
+    ['submit'],
+    (values: TFormData) =>
+      axios.post<{ message: string }>('/api/requisitions', values),
+    {
+      onSuccess: (response) => {
+        const { message } = response.data;
+        showNotification({ message, color: 'green' });
+      },
+      onError: (error: AxiosError<{ message: string } | ZodError>) => {
+        const message = error.response?.data?.message;
+        if (message) {
+          return showNotification({ message, color: 'red' });
+        }
+        // Handle ZodError
+      },
+    }
+  );
+
+  const hasError = Object.keys(form.errors).length > 0;
   const { registryId, emails } = form.values;
   const registry = registryId ? Registries.getById(registryId) : null;
 
   const { onChange: onEmailsChange, ...emailsProps } =
     form.getInputProps('emails');
+  const submit = form.onSubmit((values) => submitMutation.mutate(values));
   return (
     <>
       <Head>
@@ -69,7 +109,7 @@ export default function Home() {
       </Head>
       <Main>
         <div>Notificações de cartórios</div>
-        <FieldsWrapper>
+        <Form onSubmit={submit}>
           <Select
             style={marginTop}
             label="Cartório"
@@ -110,20 +150,24 @@ export default function Home() {
                 label="Emails para serem notificados"
                 placeholder="Adicione emails"
                 searchable
-                onSearchChange={(query) => {
-                  setEmailValid(emailRegex.test(query));
-                }}
-                creatable={isEmailValid}
+                creatable
                 getCreateLabel={(query) => `+ Adicionar "${query}"`}
                 onChange={(values) => {
-                  setEmailValid(false);
                   onEmailsChange(values.map((value) => value.toLowerCase()));
                 }}
                 {...emailsProps}
               />
+              <Button
+                style={marginTop}
+                loading={submitMutation.isLoading}
+                disabled={hasError || submitMutation.isLoading}
+                type="submit"
+              >
+                Salvar
+              </Button>
             </>
           )}
-        </FieldsWrapper>
+        </Form>
       </Main>
     </>
   );

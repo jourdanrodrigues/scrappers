@@ -26,10 +26,6 @@ export class Registries {
     return clients[id];
   }
 
-  static existForId(id: number): boolean {
-    return id in registries;
-  }
-
   static getAll(): Registry[] {
     return Object.values(registries);
   }
@@ -38,13 +34,14 @@ export class Registries {
     return registries[id];
   }
 
-  static getTypes(): number[] {
+  static getTypes() {
     return this.getAll().reduce(
-      (output, registry) => [
-        ...output,
-        ...registry.requisitionTypes.map(({ value }) => value),
-      ],
-      [] as number[]
+      (output, registry) =>
+        new Set([
+          ...output,
+          ...registry.requisitionTypes.map(({ value }) => value),
+        ]),
+      new Set() as Set<number>
     );
   }
 }

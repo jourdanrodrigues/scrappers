@@ -2,7 +2,7 @@
 CREATE TABLE "Requisition" (
     "id" SERIAL NOT NULL,
     "number" TEXT NOT NULL,
-    "password" TEXT,
+    "password" TEXT NOT NULL,
     "type" INTEGER NOT NULL,
     "registryId" INTEGER NOT NULL,
 
