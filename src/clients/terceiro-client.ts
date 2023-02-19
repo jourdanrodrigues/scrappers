@@ -6,6 +6,8 @@ if (!API_URL) throw new Error('NEXT_PUBLIC_TERCEIRO_API_URL is not defined');
 
 const client = axios.create({ baseURL: API_URL });
 
+export type RawPhase = Omit<Phase, 'id' | 'requisitionId'>;
+
 type QueryResponse = {
   cs: {
     NumSolicitacao: string;
@@ -27,7 +29,7 @@ type QueryResponse = {
 export class TerceiroClient {
   static async fetchPhases(
     requisition: Pick<Requisition, 'number' | 'type' | 'password'>
-  ): Promise<Omit<Phase, 'id' | 'requisitionId'>[]> {
+  ): Promise<RawPhase[]> {
     const data = await this.fetchRequisition(requisition);
     return data.movi.map(({ DataSistema, NomeFase }) => ({
       date: new Date(Date.parse(DataSistema)),
