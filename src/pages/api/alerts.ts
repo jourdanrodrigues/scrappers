@@ -6,6 +6,7 @@ import { RawPhase } from '@/clients/terceiro-client';
 import nodemailer, { Transporter } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { Listener, Phase, Requisition } from '@prisma/client';
+import { findNewPhases } from '@/helpers';
 
 const sourceEmail = process.env.EMAIL_ADDRESS;
 const emailPassword = process.env.EMAIL_PASSWORD;
@@ -22,7 +23,7 @@ export default async function handler(
     auth: { user: sourceEmail, pass: emailPassword },
   });
   const requisitions = await Prisma.requisition.findMany({
-    include: { listeners: true, phases: { orderBy: { id: 'desc' } } },
+    include: { listeners: true, phases: { orderBy: { id: 'asc' } } },
   });
 
   const promises = requisitions.map(async (requisition) => {
@@ -31,14 +32,7 @@ export default async function handler(
 
     const fetchedPhases = await client.fetchPhases(requisition);
 
-    const knownPhases = requisition.phases;
-    const lastKnownPhase = knownPhases[0];
-    const lastFetchedPhase = fetchedPhases[0];
-    if (lastKnownPhase?.description === lastFetchedPhase?.description) {
-      return;
-    }
-
-    const newPhases = fetchedPhases.slice(knownPhases.length);
+    const newPhases = findNewPhases(requisition.phases, fetchedPhases);
     if (newPhases.length === 0) return;
 
     const requisitionId = requisition.id;
@@ -59,7 +53,7 @@ function sendEmails(
   newPhases: RawPhase[]
 ) {
   const emails = requisition.listeners.map(({ email }) => email);
-  const lastPhaseText = requisition.phases[0].description;
+  const lastPhaseText = newPhases.at(-1)?.description;
   const phasesText = newPhases.map((phase) => phase.description).join('\n');
   const text = `Novas fases da solicitação:\n\n${phasesText}`;
   const subject = `Atualização ${requisition.number}: ${lastPhaseText}`;

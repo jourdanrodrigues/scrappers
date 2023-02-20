@@ -3,6 +3,7 @@ import { Phase, Requisition } from '@prisma/client';
 import { z } from 'zod';
 import { Registries } from '@/registries';
 import { Prisma } from '@/clients/prisma';
+import { findNewPhases } from '@/helpers';
 
 const types = Registries.getTypes();
 
@@ -37,14 +38,15 @@ async function handleRequisitionCreation(
   if (!client) {
     return res.status(404).json({ message: 'Cartório desconheido.' });
   }
-  let phases: Omit<Phase, 'id' | 'requisitionId'>[];
+  let fetchedPhases: Omit<Phase, 'id' | 'requisitionId'>[];
   try {
-    phases = await client.fetchPhases(data);
+    fetchedPhases = await client.fetchPhases(data);
   } catch (error) {
     return res.status(400).json({ message: 'Solicitação inválida.' });
   }
 
   const requisition = await Prisma.requisition.upsert({
+    include: { phases: true },
     where: {
       requisitionPerRegistry: {
         registryId: data.registryId,
@@ -56,11 +58,16 @@ async function handleRequisitionCreation(
   });
 
   const requisitionId = requisition.id;
-  const promises: Promise<any>[] = [
-    Prisma.phase.createMany({
-      data: phases.map((phase) => ({ ...phase, requisitionId })),
-    }),
-  ];
+  const promises: Promise<any>[] = [];
+
+  const newPhases = findNewPhases(requisition.phases, fetchedPhases);
+  if (newPhases.length > 0) {
+    promises.push(
+      Prisma.phase.createMany({
+        data: newPhases.map((phase) => ({ ...phase, requisitionId })),
+      })
+    );
+  }
 
   if (Array.isArray(emails) && emails.length > 0) {
     const uniqueEmails = [...new Set(emails)];
