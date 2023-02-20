@@ -56,17 +56,24 @@ async function handleRequisitionCreation(
   });
 
   const requisitionId = requisition.id;
-  const promises = [
+  const promises: Promise<any>[] = [
     Prisma.phase.createMany({
       data: phases.map((phase) => ({ ...phase, requisitionId })),
     }),
   ];
 
   if (Array.isArray(emails) && emails.length > 0) {
+    const uniqueEmails = [...new Set(emails)];
     promises.push(
-      Prisma.listener.createMany({
-        data: emails.map((email) => ({ email, requisitionId })),
-      })
+      Prisma.listener
+        .findMany({ where: { requisitionId, email: { in: uniqueEmails } } })
+        .then((listeners) => new Set(listeners.map(({ email }) => email)))
+        .then((existingEmails) => {
+          const data = uniqueEmails
+            .filter((email) => !existingEmails.has(email))
+            .map((email) => ({ email, requisitionId }));
+          return Prisma.listener.createMany({ data });
+        })
     );
   }
 
