@@ -13,13 +13,15 @@ type QueryResponse = {
     NomeApresentante: string;
     NomeParteInteressada: string;
   };
-  movi: { DataSistema: string; NomeFase: string }[];
-  pend: {
-    NumeroSeqPendencia: number;
-    TextoPendencia: string;
-    DataPendencia: string;
-    NumSolicitacao: string;
-  }[];
+  movi: { DataSistema: string; NomeFase: string }[] | null;
+  pend:
+    | {
+        NumeroSeqPendencia: number;
+        TextoPendencia: string;
+        DataPendencia: string;
+        NumSolicitacao: string;
+      }[]
+    | null;
 };
 
 export class TerceiroClient {
@@ -38,11 +40,11 @@ export class TerceiroClient {
 
     const { movi, pend } = response.data;
     return {
-      phases: movi.map(({ DataSistema, NomeFase }) => ({
+      phases: (movi || []).map(({ DataSistema, NomeFase }) => ({
         date: new Date(Date.parse(DataSistema)),
         description: NomeFase,
       })),
-      pendencies: pend.map(({ TextoPendencia, DataPendencia }) => ({
+      pendencies: (pend || []).map(({ TextoPendencia, DataPendencia }) => ({
         description: TextoPendencia,
         date: new Date(Date.parse(DataPendencia)),
       })),
