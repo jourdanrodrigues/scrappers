@@ -5,6 +5,7 @@ import { Registries } from '@/registries';
 import { Prisma } from '@/clients/prisma';
 import { findNewObjects } from '@/helpers';
 import { RawPendency, RawPhase } from '@/clients/terceiro-client';
+import * as Sentry from '@sentry/nextjs';
 
 const types = Registries.getTypes();
 
@@ -46,6 +47,7 @@ async function handleRequisitionCreation(
     fetchedPhases = requisition.phases;
     fetchedPendencies = requisition.pendencies;
   } catch (error) {
+    Sentry.captureException(error);
     return res.status(400).json({ message: 'Solicitação inválida.' });
   }
 
