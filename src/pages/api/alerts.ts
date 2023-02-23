@@ -7,6 +7,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { Listener, Requisition } from '@prisma/client';
 import { findNewObjects } from '@/helpers';
+import OpenAIClient from '@/clients/openai';
 
 const sourceEmail = process.env.EMAIL_ADDRESS;
 const emailPassword = process.env.EMAIL_PASSWORD;
@@ -66,7 +67,7 @@ export default async function handler(
   res.status(200).json({ message: 'Alerts sent.' });
 }
 
-function sendEmails(
+async function sendEmails(
   transport: Transporter<SMTPTransport.SentMessageInfo>,
   requisition: Requisition & { listeners: Listener[] },
   newPhases: RawPhase[],
@@ -76,10 +77,20 @@ function sendEmails(
 
   const textPieces = [];
   if (newPhases.length > 0) {
-    textPieces.push(buildBody('fases', newPhases));
+    const body = newPhases.map((phase) => phase.description).join('\n');
+    textPieces.push(`Novas fases da solicitação:\n\n${body}`);
   }
   if (newPendencies.length > 0) {
-    textPieces.push(buildBody('pendências', newPendencies));
+    const descriptions = await Promise.all(
+      newPendencies.map(({ description }) =>
+        OpenAIClient.summarize(description).then((response) =>
+          response.data.choices[0].text?.replace(/^\s+/, '')
+        )
+      )
+    );
+    textPieces.push(
+      `Novas pendências da solicitação:\n\n${descriptions.join('\n')}`
+    );
   }
 
   return transport.sendMail({
@@ -87,9 +98,4 @@ function sendEmails(
     subject: `Atualização ${requisition.number}`,
     text: textPieces.join('\n\n-------------------XXX-------------------\n\n'),
   });
-}
-
-function buildBody(label: string, items: (RawPhase | RawPendency)[]): string {
-  const body = items.map((item) => item.description).join('\n');
-  return `Novas ${label} da solicitação:\n\n${body}`;
 }

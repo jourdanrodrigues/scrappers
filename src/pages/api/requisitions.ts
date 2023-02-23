@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Phase, Requisition } from '@prisma/client';
+import { Requisition } from '@prisma/client';
 import { z } from 'zod';
 import { Registries } from '@/registries';
 import { Prisma } from '@/clients/prisma';
 import { findNewObjects } from '@/helpers';
+import { RawPendency, RawPhase } from '@/clients/terceiro-client';
 
 const types = Registries.getTypes();
 
@@ -38,16 +39,18 @@ async function handleRequisitionCreation(
   if (!client) {
     return res.status(404).json({ message: 'Cartório desconheido.' });
   }
-  let fetchedPhases: Omit<Phase, 'id' | 'requisitionId'>[];
+  let fetchedPhases: RawPhase[];
+  let fetchedPendencies: RawPendency[];
   try {
     const requisition = await client.fetchRequisition(data);
     fetchedPhases = requisition.phases;
+    fetchedPendencies = requisition.pendencies;
   } catch (error) {
     return res.status(400).json({ message: 'Solicitação inválida.' });
   }
 
   const requisition = await Prisma.requisition.upsert({
-    include: { phases: true },
+    include: { phases: true, pendencies: true },
     where: {
       requisitionPerRegistry: {
         registryId: data.registryId,
@@ -61,11 +64,22 @@ async function handleRequisitionCreation(
   const requisitionId = requisition.id;
   const promises: Promise<any>[] = [];
 
+  const newPendencies = findNewObjects(
+    requisition.pendencies,
+    fetchedPendencies
+  );
   const newPhases = findNewObjects(requisition.phases, fetchedPhases);
   if (newPhases.length > 0) {
     promises.push(
       Prisma.phase.createMany({
         data: newPhases.map((phase) => ({ ...phase, requisitionId })),
+      })
+    );
+  }
+  if (newPendencies.length > 0) {
+    promises.push(
+      Prisma.pendency.createMany({
+        data: newPendencies.map((pendency) => ({ ...pendency, requisitionId })),
       })
     );
   }
