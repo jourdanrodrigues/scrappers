@@ -3,7 +3,7 @@ import { Phase, Requisition } from '@prisma/client';
 import { z } from 'zod';
 import { Registries } from '@/registries';
 import { Prisma } from '@/clients/prisma';
-import { findNewPhases } from '@/helpers';
+import { findNewObjects } from '@/helpers';
 
 const types = Registries.getTypes();
 
@@ -61,7 +61,7 @@ async function handleRequisitionCreation(
   const requisitionId = requisition.id;
   const promises: Promise<any>[] = [];
 
-  const newPhases = findNewPhases(requisition.phases, fetchedPhases);
+  const newPhases = findNewObjects(requisition.phases, fetchedPhases);
   if (newPhases.length > 0) {
     promises.push(
       Prisma.phase.createMany({

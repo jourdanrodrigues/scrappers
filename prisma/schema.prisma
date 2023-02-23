@@ -18,6 +18,7 @@ model Requisition {
   type       Int
   listeners  Listener[]
   phases     Phase[]
+  pendencies Pendency[]
 
   @@unique([number, registryId], name: "requisitionPerRegistry")
 }
@@ -30,6 +31,14 @@ model Listener {
 }
 
 model Phase {
+  id            Int         @id @default(autoincrement())
+  date          DateTime
+  description   String
+  requisition   Requisition @relation(fields: [requisitionId], references: [id])
+  requisitionId Int
+}
+
+model Pendency {
   id            Int         @id @default(autoincrement())
   date          DateTime
   description   String

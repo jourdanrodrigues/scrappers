@@ -1,15 +1,15 @@
-import { Phase } from '@prisma/client';
-import { RawPhase } from '@/clients/terceiro-client';
+import { Pendency, Phase } from '@prisma/client';
+import { RawPendency, RawPhase } from '@/clients/terceiro-client';
 
-export function findNewPhases(
-  knownPhases: Phase[],
-  fetchedPhases: RawPhase[]
+export function findNewObjects(
+  known: (Phase | Pendency)[],
+  fetched: (RawPhase | RawPendency)[]
 ): RawPhase[] {
-  const lastKnownPhase = knownPhases.at(-1);
-  const lastFetchedPhase = fetchedPhases.at(-1);
-  if (lastKnownPhase?.description === lastFetchedPhase?.description) {
+  const lastKnown = known.at(-1);
+  const lastFetched = fetched.at(-1);
+  if (lastKnown?.description === lastFetched?.description) {
     return [];
   }
 
-  return fetchedPhases.slice(knownPhases.length);
+  return fetched.slice(known.length);
 }

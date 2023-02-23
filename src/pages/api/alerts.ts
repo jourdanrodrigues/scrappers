@@ -2,11 +2,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Prisma } from '@/clients/prisma';
 import { Registries } from '@/registries';
-import { RawPhase } from '@/clients/terceiro-client';
+import { RawPendency, RawPhase } from '@/clients/terceiro-client';
 import nodemailer, { Transporter } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
-import { Listener, Phase, Requisition } from '@prisma/client';
-import { findNewPhases } from '@/helpers';
+import { Listener, Requisition } from '@prisma/client';
+import { findNewObjects } from '@/helpers';
 
 const sourceEmail = process.env.EMAIL_ADDRESS;
 const emailPassword = process.env.EMAIL_PASSWORD;
@@ -23,26 +23,43 @@ export default async function handler(
     auth: { user: sourceEmail, pass: emailPassword },
   });
   const requisitions = await Prisma.requisition.findMany({
-    include: { listeners: true, phases: { orderBy: { id: 'asc' } } },
+    include: {
+      listeners: true,
+      phases: { orderBy: { id: 'asc' } },
+      pendencies: { orderBy: { id: 'asc' } },
+    },
   });
 
   const promises = requisitions.map(async (requisition) => {
     const client = Registries.getClientById(requisition.registryId);
     if (!client) return;
 
-    const { phases: fetchedPhases } = await client.fetchRequisition(
-      requisition
+    const { phases: fetchedPhases, pendencies: fetchedPendencies } =
+      await client.fetchRequisition(requisition);
+
+    const newPendencies = findNewObjects(
+      requisition.pendencies,
+      fetchedPendencies
     );
-
-    const newPhases = findNewPhases(requisition.phases, fetchedPhases);
-    if (newPhases.length === 0) return;
-
+    const newPhases = findNewObjects(requisition.phases, fetchedPhases);
+    const promises = [];
     const requisitionId = requisition.id;
+    if (newPhases.length > 0) {
+      const payload = newPhases.map((phase) => ({ ...phase, requisitionId }));
+      promises.push(Prisma.phase.createMany({ data: payload }));
+    }
+    if (newPendencies.length > 0) {
+      const payload = newPendencies.map((pendency) => ({
+        ...pendency,
+        requisitionId,
+      }));
+      promises.push(Prisma.pendency.createMany({ data: payload }));
+    }
+
+    if (promises.length === 0) return;
     await Promise.all([
-      Prisma.phase.createMany({
-        data: newPhases.map((phase) => ({ ...phase, requisitionId })),
-      }),
-      sendEmails(transport, requisition, newPhases),
+      ...promises,
+      sendEmails(transport, requisition, newPhases, newPendencies),
     ]);
   });
   await Promise.all(promises);
@@ -51,14 +68,28 @@ export default async function handler(
 
 function sendEmails(
   transport: Transporter<SMTPTransport.SentMessageInfo>,
-  requisition: Requisition & { listeners: Listener[]; phases: Phase[] },
-  newPhases: RawPhase[]
+  requisition: Requisition & { listeners: Listener[] },
+  newPhases: RawPhase[],
+  newPendencies: RawPendency[]
 ) {
   const emails = requisition.listeners.map(({ email }) => email);
-  const lastPhaseText = newPhases.at(-1)?.description;
-  const phasesText = newPhases.map((phase) => phase.description).join('\n');
-  const text = `Novas fases da solicitação:\n\n${phasesText}`;
-  const subject = `Atualização ${requisition.number}: ${lastPhaseText}`;
 
-  return transport.sendMail({ bcc: emails, subject, text });
+  const textPieces = [];
+  if (newPhases.length > 0) {
+    textPieces.push(buildBody('fases', newPhases));
+  }
+  if (newPendencies.length > 0) {
+    textPieces.push(buildBody('pendências', newPendencies));
+  }
+
+  return transport.sendMail({
+    bcc: emails,
+    subject: `Atualização ${requisition.number}`,
+    text: textPieces.join('\n\n-------------------XXX-------------------\n\n'),
+  });
+}
+
+function buildBody(label: string, items: (RawPhase | RawPendency)[]): string {
+  const body = items.map((item) => item.description).join('\n');
+  return `Novas ${label} da solicitação:\n\n${body}`;
 }

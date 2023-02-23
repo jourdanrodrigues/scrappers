@@ -1,7 +1,8 @@
 import axios from 'axios';
-import { Requisition, Phase } from '@prisma/client';
+import { Requisition, Phase, Pendency } from '@prisma/client';
 
 export type RawPhase = Omit<Phase, 'id' | 'requisitionId'>;
+export type RawPendency = Omit<Pendency, 'id' | 'requisitionId'>;
 
 type QueryResponse = {
   cs: {
@@ -24,7 +25,7 @@ type QueryResponse = {
 export class TerceiroClient {
   static async fetchRequisition(
     requisition: Pick<Requisition, 'number' | 'type' | 'password'>
-  ): Promise<{ phases: RawPhase[] }> {
+  ): Promise<{ phases: RawPhase[]; pendencies: RawPendency[] }> {
     const payload = {
       NrSolicitacao: requisition.number,
       TipoSolicitacao: requisition.type,
@@ -35,10 +36,15 @@ export class TerceiroClient {
       payload
     );
 
+    const { movi, pend } = response.data;
     return {
-      phases: response.data.movi.map(({ DataSistema, NomeFase }) => ({
+      phases: movi.map(({ DataSistema, NomeFase }) => ({
         date: new Date(Date.parse(DataSistema)),
         description: NomeFase,
+      })),
+      pendencies: pend.map(({ TextoPendencia, DataPendencia }) => ({
+        description: TextoPendencia,
+        date: new Date(Date.parse(DataPendencia)),
       })),
     };
   }
