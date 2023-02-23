@@ -40,7 +40,8 @@ async function handleRequisitionCreation(
   }
   let fetchedPhases: Omit<Phase, 'id' | 'requisitionId'>[];
   try {
-    fetchedPhases = await client.fetchPhases(data);
+    const requisition = await client.fetchRequisition(data);
+    fetchedPhases = requisition.phases;
   } catch (error) {
     return res.status(400).json({ message: 'Solicitação inválida.' });
   }

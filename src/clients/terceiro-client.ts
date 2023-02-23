@@ -22,27 +22,25 @@ type QueryResponse = {
 };
 
 export class TerceiroClient {
-  static async fetchPhases(
+  static async fetchRequisition(
     requisition: Pick<Requisition, 'number' | 'type' | 'password'>
-  ): Promise<RawPhase[]> {
-    const data = await this.fetchRequisition(requisition);
-    return data.movi.map(({ DataSistema, NomeFase }) => ({
-      date: new Date(Date.parse(DataSistema)),
-      description: NomeFase,
-    }));
-  }
-
-  private static fetchRequisition(
-    requisition: Pick<Requisition, 'number' | 'type' | 'password'>
-  ): Promise<QueryResponse> {
+  ): Promise<{ phases: RawPhase[] }> {
     const payload = {
       NrSolicitacao: requisition.number,
       TipoSolicitacao: requisition.type,
       SenhaInternet: requisition.password,
     };
-    return this.getClient()
-      .post<QueryResponse>('/Solicitacao/Consulta', payload)
-      .then((response) => response.data);
+    const response = await this.getClient().post<QueryResponse>(
+      '/Solicitacao/Consulta',
+      payload
+    );
+
+    return {
+      phases: response.data.movi.map(({ DataSistema, NomeFase }) => ({
+        date: new Date(Date.parse(DataSistema)),
+        description: NomeFase,
+      })),
+    };
   }
 
   private static getClient() {

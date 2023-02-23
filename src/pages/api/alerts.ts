@@ -30,7 +30,9 @@ export default async function handler(
     const client = Registries.getClientById(requisition.registryId);
     if (!client) return;
 
-    const fetchedPhases = await client.fetchPhases(requisition);
+    const { phases: fetchedPhases } = await client.fetchRequisition(
+      requisition
+    );
 
     const newPhases = findNewPhases(requisition.phases, fetchedPhases);
     if (newPhases.length === 0) return;
