@@ -10,6 +10,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model OlxCarAd {
+  listId      Int    @id
+  subject     String
+  price       String
+  date        Int
+  location    String
+  urlId       Int
+  thumbnailId Int
+
+  url       OlxUrlBranch @relation("Url", fields: [urlId], references: [id])
+  thumbnail OlxUrlBranch @relation("Thumbnail", fields: [thumbnailId], references: [id])
+}
+
+model OlxUrlBranch {
+  id           Int    @id @default(autoincrement())
+  path         String @unique
+  parentPathId Int?
+
+  chidren            OlxUrlBranch[] @relation("Parent")
+  parentPath         OlxUrlBranch?  @relation("Parent", fields: [parentPathId], references: [id])
+  carAdsAsUrls       OlxCarAd[]     @relation("Url")
+  carAdsAsThumbnails OlxCarAd[]     @relation("Thumbnail")
+
+  @@unique([path, parentPathId], name: "uniqueUrlBranch")
+}
+
 model Requisition {
   id         Int        @id @default(autoincrement())
   registryId Int
